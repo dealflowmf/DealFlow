@@ -669,6 +669,12 @@ input[type="text"].search {
     </ol>
 
     <div class="field-group">
+      <label class="field-label">Google OAuth Client ID</label>
+      <input type="text" id="client-id-input" placeholder="264136189429-....apps.googleusercontent.com" />
+      <div style="font-size:11px;color:var(--muted);margin-top:4px;font-style:italic;">From Google Cloud Console &rarr; Credentials &rarr; OAuth 2.0 Client IDs</div>
+    </div>
+
+    <div class="field-group">
       <label class="field-label">Your Email (for daily summary)</label>
       <input type="email" id="summary-email-input" placeholder="ronak@fpamultifamily.com" />
     </div>
@@ -888,8 +894,10 @@ window.addEventListener('load', async () => {
   // No token — show auth screen, pre-fill saved prefs
   const savedEmail = await storeLoad(SK_EMAIL);
   const savedTime  = await storeLoad(SK_TIME);
+  const savedClient = await storeLoad(SK_GCLIENT);
   if (savedEmail) document.getElementById('summary-email-input').value = savedEmail;
   if (savedTime)  document.getElementById('summary-time-input').value = savedTime;
+  if (savedClient) document.getElementById('client-id-input').value = savedClient;
 });
 
 async function initApp() {
@@ -946,31 +954,24 @@ async function initApp() {
 // GOOGLE AUTH (implicit flow)
 // ════════════════════════════════════════════════════
 async function startGoogleAuth() {
-  // Save settings before redirect
+  // Read client ID from visible input field
+  const clientIdInput = document.getElementById('client-id-input').value.trim();
+  if (!clientIdInput) {
+    alert('Please paste your Google OAuth Client ID in the field above before signing in.');
+    document.getElementById('client-id-input').focus();
+    return;
+  }
+  await storeSave(SK_GCLIENT, clientIdInput);
+
+  // Save other settings
   const email = document.getElementById('summary-email-input').value.trim();
   const time  = document.getElementById('summary-time-input').value;
   if (email) await storeSave(SK_EMAIL, email);
   await storeSave(SK_TIME, time);
 
-  // Get or prompt for client ID
-  let clientId = await storeLoad(SK_GCLIENT);
-  if (!clientId) {
-    clientId = prompt(
-      "Enter your Google OAuth Client ID.\n\n" +
-      "To get one (free):\n" +
-      "1. Go to console.cloud.google.com\n" +
-      "2. Create project → Enable Gmail API\n" +
-      "3. Credentials → Create OAuth 2.0 Client ID (Web application)\n" +
-      "4. Add this page's URL as an Authorized redirect URI\n\n" +
-      "Paste your Client ID here:"
-    );
-    if (!clientId) return;
-    await storeSave(SK_GCLIENT, clientId.trim());
-  }
-
   const redirectUri = encodeURIComponent(window.location.href.split('?')[0].split('#')[0]);
   const scope = encodeURIComponent(SCOPES);
-  const url = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=token&scope=${scope}&prompt=select_account`;
+  const url = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientIdInput}&redirect_uri=${redirectUri}&response_type=token&scope=${scope}&prompt=select_account`;
   window.location.href = url;
 }
 
