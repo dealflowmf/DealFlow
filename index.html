@@ -953,25 +953,34 @@ async function initApp() {
 // ════════════════════════════════════════════════════
 // GOOGLE AUTH (implicit flow)
 // ════════════════════════════════════════════════════
-async function startGoogleAuth() {
-  // Read client ID from visible input field
-  const clientIdInput = document.getElementById('client-id-input').value.trim();
-  if (!clientIdInput) {
-    alert('Please paste your Google OAuth Client ID in the field above before signing in.');
-    document.getElementById('client-id-input').focus();
+function startGoogleAuth() {
+  // Read client ID from visible input — fully synchronous, no async
+  const clientId = document.getElementById('client-id-input').value.trim();
+  if (!clientId) {
+    alert('Please enter your Google OAuth Client ID first.');
     return;
   }
-  await storeSave(SK_GCLIENT, clientIdInput);
 
-  // Save other settings
-  const email = document.getElementById('summary-email-input').value.trim();
-  const time  = document.getElementById('summary-time-input').value;
-  if (email) await storeSave(SK_EMAIL, email);
-  await storeSave(SK_TIME, time);
+  // Save to localStorage synchronously
+  try {
+    localStorage.setItem(SK_GCLIENT, JSON.stringify(clientId));
+    const email = document.getElementById('summary-email-input').value.trim();
+    const time  = document.getElementById('summary-time-input').value;
+    if (email) localStorage.setItem(SK_EMAIL, JSON.stringify(email));
+    if (time)  localStorage.setItem(SK_TIME,  JSON.stringify(time));
+  } catch(e) { /* storage may be blocked, continue anyway */ }
 
-  const redirectUri = encodeURIComponent(window.location.href.split('?')[0].split('#')[0]);
-  const scope = encodeURIComponent(SCOPES);
-  const url = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientIdInput}&redirect_uri=${redirectUri}&response_type=token&scope=${scope}&prompt=select_account`;
+  // Build redirect URL and go
+  const base    = window.location.href.split('?')[0].split('#')[0];
+  const redirect = encodeURIComponent(base);
+  const scope    = encodeURIComponent('https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.send');
+  const url = 'https://accounts.google.com/o/oauth2/v2/auth'
+    + '?client_id='     + clientId
+    + '&redirect_uri='  + redirect
+    + '&response_type=token'
+    + '&scope='         + scope
+    + '&prompt=select_account';
+
   window.location.href = url;
 }
 
