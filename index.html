@@ -662,7 +662,7 @@ input[type="text"].search {
     <p class="lead">Forward deal marketing emails to a dedicated Gmail address. This app reads that inbox, extracts key deal data with AI, and sends you a daily digest.</p>
 
     <ol class="step-list">
-      <li><span class="step-num">1</span><span>Create a Gmail address to use as your deal drop box — e.g. <strong><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="ff998f9ed19b9a9e938cbf98929e9693d19c9092">[email&#160;protected]</a></strong></span></li>
+      <li><span class="step-num">1</span><span>Create a Gmail address to use as your deal drop box — e.g. <strong>fpa.deals@gmail.com</strong></span></li>
       <li><span class="step-num">2</span><span>In Outlook, create a rule to forward broker emails to that Gmail</span></li>
       <li><span class="step-num">3</span><span>Sign in below with that Gmail to connect</span></li>
       <li><span class="step-num">4</span><span>Enter your real email to receive the daily summary</span></li>
@@ -819,7 +819,7 @@ input[type="text"].search {
 
 </div><!-- /wrap -->
 
-<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
+<script>
 // ════════════════════════════════════════════════════
 // CONSTANTS
 // ════════════════════════════════════════════════════
@@ -1548,7 +1548,36 @@ function buildSummaryHTML(todayDeals, activeCFOs, allDeals) {
   <div style="background:#f5f0e8;padding:16px 32px;border-top:1px solid #d4cdc0;font-size:11px;color:#8a8275;font-family:Arial,sans-serif;">
     FPA Multifamily Deal Flow Tracker · Automated daily summary
   </div>
-</div></body></html>`;
+</div>
+<script>
+// Global auth function defined separately so Cloudflare script injection cannot break it
+function startGoogleAuth() {
+  var clientId = document.getElementById('client-id-input').value.trim();
+  if (!clientId) {
+    alert('Please enter your Google OAuth Client ID first.');
+    document.getElementById('client-id-input').focus();
+    return;
+  }
+  try {
+    localStorage.setItem('dealflow:gclient', JSON.stringify(clientId));
+    var email = document.getElementById('summary-email-input').value.trim();
+    var time  = document.getElementById('summary-time-input').value;
+    if (email) localStorage.setItem('dealflow:summail', JSON.stringify(email));
+    if (time)  localStorage.setItem('dealflow:sumtime',  JSON.stringify(time));
+  } catch(e) {}
+  var base     = window.location.href.split('?')[0].split('#')[0];
+  var redirect = encodeURIComponent(base);
+  var scope    = encodeURIComponent('https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.send');
+  var url = 'https://accounts.google.com/o/oauth2/v2/auth'
+    + '?client_id='    + clientId
+    + '&redirect_uri=' + redirect
+    + '&response_type=token'
+    + '&scope='        + scope
+    + '&prompt=select_account';
+  window.location.href = url;
+}
+</script>
+</body></html>`;
 }
 
 function buildRawEmail(from, to, subject, html) {
