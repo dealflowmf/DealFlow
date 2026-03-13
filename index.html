@@ -662,7 +662,7 @@ input[type="text"].search {
     <p class="lead">Forward deal marketing emails to a dedicated Gmail address. This app reads that inbox, extracts key deal data with AI, and sends you a daily digest.</p>
 
     <ol class="step-list">
-      <li><span class="step-num">1</span><span>Create a Gmail address to use as your deal drop box — e.g. <strong>fpa.deals@gmail.com</strong></span></li>
+      <li><span class="step-num">1</span><span>Create a Gmail address to use as your deal drop box — e.g. <strong><a href="/cdn-cgi/l/email-protection" class="__cf_email__" data-cfemail="ff998f9ed19b9a9e938cbf98929e9693d19c9092">[email&#160;protected]</a></strong></span></li>
       <li><span class="step-num">2</span><span>In Outlook, create a rule to forward broker emails to that Gmail</span></li>
       <li><span class="step-num">3</span><span>Sign in below with that Gmail to connect</span></li>
       <li><span class="step-num">4</span><span>Enter your real email to receive the daily summary</span></li>
@@ -813,7 +813,7 @@ input[type="text"].search {
 
 </div><!-- /wrap -->
 
-<script>
+<script data-cfasync="false" src="/cdn-cgi/scripts/5c5dd728/cloudflare-static/email-decode.min.js"></script><script>
 // ════════════════════════════════════════════════════
 // CONSTANTS
 // ════════════════════════════════════════════════════
@@ -841,45 +841,43 @@ let summaryScheduled = null;
 let selectedIdx = null;
 
 // ════════════════════════════════════════════════════
-// STORAGE HELPERS (uses window.storage if available, else localStorage fallback)
+// STORAGE HELPERS (localStorage — works on GitHub Pages)
 // ════════════════════════════════════════════════════
 async function storeSave(key, val) {
   try {
-    if (window.storage) await window.storage.set(key, JSON.stringify(val));
+    if (val === null || val === undefined) localStorage.removeItem(key);
     else localStorage.setItem(key, JSON.stringify(val));
-  } catch(e) { console.warn('storeSave', e); }
+  } catch(e) { console.warn('storeSave failed', key, e); }
 }
 async function storeLoad(key) {
   try {
-    if (window.storage) {
-      const r = await window.storage.get(key);
-      return r ? JSON.parse(r.value) : null;
-    } else {
-      const v = localStorage.getItem(key);
-      return v ? JSON.parse(v) : null;
-    }
+    const v = localStorage.getItem(key);
+    return v ? JSON.parse(v) : null;
   } catch(e) { return null; }
 }
 
 // ════════════════════════════════════════════════════
-// BOOT
+// BOOT — grab token from URL hash synchronously FIRST
 // ════════════════════════════════════════════════════
-window.addEventListener('load', async () => {
-  // Check for OAuth callback
-  const hash = window.location.hash;
-  if (hash.includes('access_token')) {
-    const params = new URLSearchParams(hash.slice(1));
-    const token = params.get('access_token');
-    if (token) {
-      gToken = token;
-      await storeSave(SK_TOKEN, token);
-      history.replaceState(null, '', window.location.pathname);
-      await initApp();
-      return;
-    }
-  }
 
-  // Try saved token
+// This runs immediately (not async) so the token is in
+// localStorage before the load event fires.
+(function grabTokenFromHash() {
+  try {
+    const hash = window.location.hash;
+    if (hash && hash.includes('access_token')) {
+      const params = new URLSearchParams(hash.replace(/^#/, ''));
+      const token = params.get('access_token');
+      if (token) {
+        localStorage.setItem(SK_TOKEN, JSON.stringify(token));
+        history.replaceState(null, '', window.location.pathname + window.location.search);
+      }
+    }
+  } catch(e) { console.warn('grabTokenFromHash failed', e); }
+})();
+
+window.addEventListener('load', async () => {
+  // Try token — either just saved from hash above, or from a previous session
   const saved = await storeLoad(SK_TOKEN);
   if (saved) {
     gToken = saved;
@@ -887,7 +885,7 @@ window.addEventListener('load', async () => {
     return;
   }
 
-  // Load saved summary prefs into auth form
+  // No token — show auth screen, pre-fill saved prefs
   const savedEmail = await storeLoad(SK_EMAIL);
   const savedTime  = await storeLoad(SK_TIME);
   if (savedEmail) document.getElementById('summary-email-input').value = savedEmail;
@@ -978,7 +976,7 @@ async function startGoogleAuth() {
 
 function logout() {
   if (!confirm('Sign out? Your deal data will be preserved.')) return;
-  storeSave(SK_TOKEN, null);
+  localStorage.removeItem(SK_TOKEN);
   gToken = null;
   document.getElementById('app').style.display = 'none';
   document.getElementById('header-btns').style.display = 'none';
@@ -1602,12 +1600,4 @@ function log(msg, type='') {
   const el = document.getElementById('log-area');
   const line = document.createElement('div');
   line.className = 'log-line ' + type;
-  line.textContent = `[${new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'})}] ${msg}`;
-  el.appendChild(line);
-  el.scrollTop = el.scrollHeight;
-}
-
-document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDetail(); });
-</script>
-</body>
-</html>
+  line.textContent = `[${new Date().toLocaleTimeString([],{hour:'
