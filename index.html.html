@@ -1,0 +1,1613 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FPA Deal Flow</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@300;400;500&family=Lora:ital,wght@0,400;0,500;1,400&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink: #1a1a18;
+  --paper: #f5f0e8;
+  --paper2: #ede8de;
+  --paper3: #e3ddd2;
+  --rule: #d4cdc0;
+  --gold: #b8860b;
+  --gold2: #d4a017;
+  --red: #c0392b;
+  --green: #2d6a4f;
+  --blue: #1a3a5c;
+  --muted: #8a8275;
+  --shadow: rgba(26,26,24,0.12);
+}
+
+* { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: 'Lora', Georgia, serif;
+  min-height: 100vh;
+  position: relative;
+}
+
+/* Subtle paper texture */
+body::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='0.025'/%3E%3C/svg%3E");
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.6;
+}
+
+/* Ruled lines */
+body::after {
+  content: '';
+  position: fixed;
+  inset: 0;
+  background-image: repeating-linear-gradient(
+    transparent,
+    transparent 27px,
+    rgba(180,170,155,0.18) 27px,
+    rgba(180,170,155,0.18) 28px
+  );
+  pointer-events: none;
+  z-index: 0;
+}
+
+.wrap { position: relative; z-index: 1; }
+
+/* ─── MASTHEAD ─── */
+header {
+  border-bottom: 3px double var(--rule);
+  padding: 18px 40px 14px;
+  display: grid;
+  grid-template-columns: 1fr auto 1fr;
+  align-items: center;
+  gap: 20px;
+  background: var(--paper);
+}
+
+.header-left { display: flex; align-items: center; gap: 10px; }
+.header-right { display: flex; align-items: center; gap: 10px; justify-content: flex-end; }
+
+.masthead {
+  text-align: center;
+}
+.masthead-eyebrow {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 4px;
+  text-transform: uppercase;
+  color: var(--muted);
+  display: block;
+  margin-bottom: 2px;
+}
+.masthead-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  color: var(--ink);
+  line-height: 1;
+}
+.masthead-sub {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 3px;
+  color: var(--muted);
+  text-transform: uppercase;
+  display: block;
+  margin-top: 3px;
+}
+
+/* ─── BUTTONS ─── */
+.btn {
+  font-family: 'Syne', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  padding: 8px 18px;
+  border: none;
+  cursor: pointer;
+  border-radius: 2px;
+  transition: all 0.15s;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+.btn-primary { background: var(--ink); color: var(--paper); }
+.btn-primary:hover { background: #333; }
+.btn-primary:disabled { opacity: 0.35; cursor: not-allowed; }
+.btn-outline { background: transparent; color: var(--ink); border: 1.5px solid var(--ink); }
+.btn-outline:hover { background: var(--ink); color: var(--paper); }
+.btn-gold { background: var(--gold); color: var(--paper); }
+.btn-gold:hover { background: var(--gold2); }
+.btn-sm { padding: 5px 12px; font-size: 10px; }
+
+/* ─── AUTH SCREEN ─── */
+#auth-screen {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: calc(100vh - 80px);
+  padding: 40px;
+}
+
+.auth-card {
+  background: var(--paper);
+  border: 1.5px solid var(--rule);
+  border-radius: 4px;
+  padding: 48px 52px;
+  max-width: 520px;
+  width: 100%;
+  box-shadow: 4px 4px 0 var(--rule), 8px 8px 0 var(--paper3);
+}
+
+.auth-rule { border: none; border-top: 1px solid var(--rule); margin: 20px 0; }
+
+.auth-card h2 {
+  font-family: 'Syne', sans-serif;
+  font-size: 22px;
+  font-weight: 800;
+  margin-bottom: 8px;
+  letter-spacing: -0.3px;
+}
+.auth-card .lead {
+  font-style: italic;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.7;
+  margin-bottom: 28px;
+}
+
+.step-list { list-style: none; margin-bottom: 28px; }
+.step-list li {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--rule);
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--muted);
+}
+.step-list li:last-child { border-bottom: none; }
+.step-num {
+  font-family: 'Syne', sans-serif;
+  font-weight: 800;
+  font-size: 18px;
+  color: var(--gold);
+  line-height: 1;
+  flex-shrink: 0;
+  margin-top: -1px;
+}
+
+.field-group { margin-bottom: 14px; }
+.field-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--muted);
+  display: block;
+  margin-bottom: 5px;
+}
+input[type="text"], input[type="email"], input[type="number"], input[type="password"], select, textarea {
+  width: 100%;
+  background: var(--paper2);
+  border: 1.5px solid var(--rule);
+  border-radius: 2px;
+  color: var(--ink);
+  font-family: 'Lora', serif;
+  font-size: 14px;
+  padding: 10px 12px;
+  outline: none;
+  transition: border-color 0.15s;
+}
+input:focus, select:focus, textarea:focus { border-color: var(--gold); background: var(--paper); }
+input::placeholder, textarea::placeholder { color: var(--muted); font-style: italic; }
+
+.google-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  width: 100%;
+  padding: 13px;
+  background: white;
+  border: 1.5px solid var(--rule);
+  border-radius: 3px;
+  font-family: 'Syne', sans-serif;
+  font-size: 13px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  transition: all 0.15s;
+  color: var(--ink);
+  box-shadow: 2px 2px 0 var(--rule);
+}
+.google-btn:hover { box-shadow: 3px 3px 0 var(--rule); transform: translate(-1px,-1px); }
+
+.g-logo { display: flex; width: 18px; height: 18px; }
+
+.notice {
+  background: var(--paper2);
+  border-left: 3px solid var(--gold);
+  padding: 10px 14px;
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.6;
+  margin-top: 14px;
+  font-style: italic;
+}
+.notice a { color: var(--gold); }
+.notice code {
+  font-family: 'JetBrains Mono', monospace;
+  background: var(--paper3);
+  padding: 1px 4px;
+  font-size: 11px;
+  font-style: normal;
+}
+
+/* ─── MAIN APP ─── */
+#app { display: none; }
+
+/* Ticker bar */
+.ticker {
+  background: var(--ink);
+  color: var(--paper);
+  padding: 7px 40px;
+  display: flex;
+  align-items: center;
+  gap: 24px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  overflow: hidden;
+}
+.ticker-label { color: var(--gold2); letter-spacing: 2px; text-transform: uppercase; flex-shrink: 0; }
+.ticker-items { display: flex; gap: 32px; overflow-x: auto; scrollbar-width: none; }
+.ticker-items::-webkit-scrollbar { display: none; }
+.ticker-item { white-space: nowrap; opacity: 0.75; }
+.ticker-item span { color: var(--gold2); margin: 0 4px; }
+
+/* Stats row */
+.stats-row {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  border-bottom: 2px solid var(--rule);
+}
+.stat-box {
+  padding: 16px 24px;
+  border-right: 1px solid var(--rule);
+  text-align: center;
+}
+.stat-box:last-child { border-right: none; }
+.stat-num {
+  font-family: 'Syne', sans-serif;
+  font-size: 36px;
+  font-weight: 800;
+  line-height: 1;
+  color: var(--ink);
+}
+.stat-lbl {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--muted);
+  margin-top: 3px;
+}
+
+/* Main content area */
+.main { display: grid; grid-template-columns: 1fr 280px; }
+
+/* Feed column */
+.feed-col { border-right: 1px solid var(--rule); min-height: calc(100vh - 200px); }
+
+.feed-header {
+  padding: 14px 24px;
+  border-bottom: 1px solid var(--rule);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--paper2);
+}
+.feed-header-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.feed-toolbar { display: flex; gap: 8px; align-items: center; }
+
+input[type="text"].search {
+  width: 200px;
+  padding: 6px 10px;
+  font-size: 12px;
+}
+
+/* Deal cards */
+.deal-card {
+  border-bottom: 1px solid var(--rule);
+  padding: 20px 24px;
+  cursor: pointer;
+  transition: background 0.1s;
+  position: relative;
+}
+.deal-card:hover { background: var(--paper2); }
+.deal-card.selected { background: var(--paper2); border-left: 3px solid var(--gold); padding-left: 21px; }
+
+.deal-card-header { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; margin-bottom: 8px; }
+.deal-name {
+  font-family: 'Syne', sans-serif;
+  font-size: 15px;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--ink);
+}
+.deal-date {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  color: var(--muted);
+  white-space: nowrap;
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+
+.deal-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 7px;
+}
+.pill {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 10px;
+  padding: 2px 8px;
+  border-radius: 1px;
+  border: 1px solid;
+  white-space: nowrap;
+}
+.pill-units { border-color: var(--blue); color: var(--blue); background: rgba(26,58,92,0.06); }
+.pill-year { border-color: var(--gold); color: var(--gold); background: rgba(184,134,11,0.06); }
+.pill-location { border-color: var(--muted); color: var(--muted); background: transparent; }
+.pill-cfo { border-color: var(--red); color: var(--red); background: rgba(192,57,43,0.06); }
+.pill-cfo.soon { background: rgba(192,57,43,0.12); font-weight: 600; }
+.pill-cfo.passed { border-color: var(--muted); color: var(--muted); text-decoration: line-through; }
+.pill-cfo.none { border-color: var(--rule); color: var(--muted); }
+
+.deal-broker {
+  font-size: 12px;
+  color: var(--muted);
+  font-style: italic;
+}
+.deal-broker strong { font-style: normal; color: var(--ink); }
+
+.new-badge {
+  position: absolute;
+  top: 20px;
+  right: 24px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 1px;
+  background: var(--gold);
+  color: var(--paper);
+  padding: 2px 6px;
+  border-radius: 1px;
+  text-transform: uppercase;
+}
+
+/* Empty state */
+.empty-feed {
+  padding: 60px 24px;
+  text-align: center;
+  color: var(--muted);
+  font-style: italic;
+}
+.empty-feed .big { font-size: 40px; margin-bottom: 12px; opacity: 0.4; }
+
+/* Sidebar */
+.sidebar { padding: 20px; }
+
+.sidebar-section { margin-bottom: 24px; }
+.sidebar-heading {
+  font-family: 'Syne', sans-serif;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--muted);
+  border-bottom: 1px solid var(--rule);
+  padding-bottom: 7px;
+  margin-bottom: 12px;
+}
+
+/* Config in sidebar */
+.config-field { margin-bottom: 10px; }
+.config-label {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 2px;
+  text-transform: uppercase;
+  color: var(--muted);
+  display: block;
+  margin-bottom: 4px;
+}
+.config-field input, .config-field select {
+  font-size: 12px;
+  padding: 7px 10px;
+}
+
+/* Summary email preview */
+.summary-preview {
+  background: var(--paper2);
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+  padding: 12px;
+  font-size: 12px;
+  color: var(--muted);
+  line-height: 1.6;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* Account info */
+.account-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 12px;
+  background: var(--paper2);
+  border: 1px solid var(--rule);
+  border-radius: 2px;
+  font-size: 12px;
+  margin-bottom: 10px;
+}
+.account-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--green); flex-shrink: 0; }
+.account-email { font-family: 'JetBrains Mono', monospace; font-size: 11px; color: var(--ink); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* Processing */
+.processing-strip {
+  background: var(--ink);
+  color: var(--paper);
+  padding: 10px 24px;
+  display: none;
+  align-items: center;
+  gap: 12px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px;
+}
+.processing-strip.show { display: flex; }
+.dot-loader { display: flex; gap: 4px; }
+.dot-loader span {
+  width: 5px; height: 5px;
+  background: var(--gold2);
+  border-radius: 50%;
+  animation: dotpulse 1.2s ease-in-out infinite;
+}
+.dot-loader span:nth-child(2) { animation-delay: 0.2s; }
+.dot-loader span:nth-child(3) { animation-delay: 0.4s; }
+@keyframes dotpulse { 0%,80%,100% { opacity: 0.2; transform: scale(0.8); } 40% { opacity: 1; transform: scale(1); } }
+
+/* Log */
+.log-area {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  max-height: 120px;
+  overflow-y: auto;
+  background: var(--paper2);
+  border: 1px solid var(--rule);
+  padding: 8px 10px;
+  border-radius: 2px;
+  margin-bottom: 10px;
+  display: none;
+}
+.log-area.show { display: block; }
+.log-line { margin-bottom: 2px; color: var(--muted); line-height: 1.5; }
+.log-line.ok { color: var(--green); }
+.log-line.err { color: var(--red); }
+.log-line.hi { color: var(--gold); }
+
+/* Detail panel */
+.detail-panel {
+  position: fixed;
+  right: 0; top: 0; bottom: 0;
+  width: 480px;
+  background: var(--paper);
+  border-left: 2px solid var(--rule);
+  z-index: 300;
+  transform: translateX(100%);
+  transition: transform 0.25s cubic-bezier(0.4,0,0.2,1);
+  overflow-y: auto;
+  box-shadow: -8px 0 32px var(--shadow);
+}
+.detail-panel.open { transform: translateX(0); }
+
+.detail-header {
+  padding: 24px 28px 16px;
+  border-bottom: 2px double var(--rule);
+  position: sticky;
+  top: 0;
+  background: var(--paper);
+  z-index: 1;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+}
+.detail-title {
+  font-family: 'Syne', sans-serif;
+  font-size: 20px;
+  font-weight: 800;
+  line-height: 1.2;
+  max-width: 340px;
+}
+.close-btn {
+  background: none;
+  border: 1.5px solid var(--rule);
+  width: 30px; height: 30px;
+  border-radius: 2px;
+  cursor: pointer;
+  font-size: 14px;
+  display: flex; align-items: center; justify-content: center;
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+.close-btn:hover { border-color: var(--red); color: var(--red); }
+
+.detail-body { padding: 20px 28px 40px; }
+
+.detail-section { margin-bottom: 24px; }
+.detail-section-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 9px;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  color: var(--muted);
+  border-bottom: 1px solid var(--rule);
+  padding-bottom: 5px;
+  margin-bottom: 12px;
+}
+
+.detail-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.detail-cell {
+  background: var(--paper2);
+  border: 1px solid var(--rule);
+  padding: 10px 12px;
+  border-radius: 2px;
+}
+.detail-cell-lbl { font-family: 'JetBrains Mono', monospace; font-size: 9px; letter-spacing: 2px; text-transform: uppercase; color: var(--muted); margin-bottom: 4px; }
+.detail-cell-val { font-size: 14px; font-weight: 500; color: var(--ink); }
+.detail-cell-val.na { color: var(--muted); font-style: italic; font-size: 12px; }
+
+.raw-block {
+  background: var(--paper2);
+  border: 1px solid var(--rule);
+  padding: 12px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--muted);
+  line-height: 1.7;
+  white-space: pre-wrap;
+  word-break: break-word;
+  max-height: 200px;
+  overflow-y: auto;
+  border-radius: 2px;
+}
+
+/* Schedule indicator */
+.schedule-chip {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px;
+  color: var(--muted);
+  padding: 6px 0;
+}
+.schedule-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--green); animation: pulse 2s ease-in-out infinite; }
+@keyframes pulse { 0%,100% { opacity: 1; } 50% { opacity: 0.4; } }
+
+/* Overlay */
+.overlay {
+  position: fixed; inset: 0;
+  background: rgba(26,26,24,0.4);
+  z-index: 299;
+  display: none;
+}
+.overlay.open { display: block; }
+
+/* Responsive */
+@media (max-width: 900px) {
+  .main { grid-template-columns: 1fr; }
+  .sidebar { border-top: 1px solid var(--rule); }
+  .stats-row { grid-template-columns: repeat(3,1fr); }
+  header { grid-template-columns: 1fr; text-align: center; }
+  .header-left, .header-right { display: none; }
+  .detail-panel { width: 100%; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<!-- ══════════════ MASTHEAD ══════════════ -->
+<header>
+  <div class="header-left">
+    <div id="sync-status" class="schedule-chip" style="display:none;">
+      <div class="schedule-dot"></div>
+      <span id="sync-status-text">Auto-sync active</span>
+    </div>
+  </div>
+  <div class="masthead">
+    <span class="masthead-eyebrow">FPA Multifamily · Acquisitions</span>
+    <div class="masthead-title">DEAL FLOW</div>
+    <span class="masthead-sub">Inbound Marketing Intelligence</span>
+  </div>
+  <div class="header-right" id="header-btns" style="display:none;">
+    <button class="btn btn-outline btn-sm" onclick="sendSummaryNow()">✉ Send Summary</button>
+    <button class="btn btn-primary btn-sm" onclick="syncNow()">↺ Sync</button>
+    <button class="btn btn-sm" style="background:var(--paper2);border:1.5px solid var(--rule);font-family:'Syne',sans-serif;font-size:10px;font-weight:700;letter-spacing:1px;text-transform:uppercase;" onclick="logout()">Sign Out</button>
+  </div>
+</header>
+
+<!-- ══════════════ AUTH SCREEN ══════════════ -->
+<div id="auth-screen">
+  <div class="auth-card">
+    <h2>Connect Your Gmail Inbox</h2>
+    <p class="lead">Forward deal marketing emails to a dedicated Gmail address. This app reads that inbox, extracts key deal data with AI, and sends you a daily digest.</p>
+
+    <ol class="step-list">
+      <li><span class="step-num">1</span><span>Create a Gmail address to use as your deal drop box — e.g. <strong>fpa.deals@gmail.com</strong></span></li>
+      <li><span class="step-num">2</span><span>In Outlook, create a rule to forward broker emails to that Gmail</span></li>
+      <li><span class="step-num">3</span><span>Sign in below with that Gmail to connect</span></li>
+      <li><span class="step-num">4</span><span>Enter your real email to receive the daily summary</span></li>
+    </ol>
+
+    <div class="field-group">
+      <label class="field-label">Your Email (for daily summary)</label>
+      <input type="email" id="summary-email-input" placeholder="ronak@fpamultifamily.com" />
+    </div>
+
+    <div class="field-group">
+      <label class="field-label">Summary Time (daily digest)</label>
+      <select id="summary-time-input">
+        <option value="17:00">5:00 PM</option>
+        <option value="17:30">5:30 PM</option>
+        <option value="18:00">6:00 PM</option>
+        <option value="08:00">8:00 AM (next morning)</option>
+      </select>
+    </div>
+
+    <hr class="auth-rule">
+
+    <button class="google-btn" onclick="startGoogleAuth()">
+      <svg class="g-logo" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+        <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
+        <path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/>
+        <path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l3.66-2.84z" fill="#FBBC05"/>
+        <path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/>
+      </svg>
+      Sign in with Google
+    </button>
+
+    <div class="notice">
+      This app requests <strong>read-only</strong> Gmail access (<code>gmail.readonly</code>) and the ability to send email on your behalf for the daily summary (<code>gmail.send</code>). No emails are stored on any server — all data stays in your browser.
+    </div>
+  </div>
+</div>
+
+<!-- ══════════════ MAIN APP ══════════════ -->
+<div id="app">
+
+  <!-- Ticker -->
+  <div class="ticker" id="ticker">
+    <span class="ticker-label">Latest</span>
+    <div class="ticker-items" id="ticker-items">
+      <span class="ticker-item">Awaiting deals...</span>
+    </div>
+  </div>
+
+  <!-- Processing strip -->
+  <div class="processing-strip" id="processing-strip">
+    <div class="dot-loader"><span></span><span></span><span></span></div>
+    <span id="processing-msg">Syncing Gmail...</span>
+  </div>
+
+  <!-- Stats -->
+  <div class="stats-row">
+    <div class="stat-box"><div class="stat-num" id="s-deals">0</div><div class="stat-lbl">Deals</div></div>
+    <div class="stat-box"><div class="stat-num" id="s-units">—</div><div class="stat-lbl">Total Units</div></div>
+    <div class="stat-box"><div class="stat-num" id="s-cfo">0</div><div class="stat-lbl">Active CFOs</div></div>
+    <div class="stat-box"><div class="stat-num" id="s-markets">0</div><div class="stat-lbl">Markets</div></div>
+    <div class="stat-box"><div class="stat-num" id="s-brokers">0</div><div class="stat-lbl">Brokers</div></div>
+  </div>
+
+  <!-- Main -->
+  <div class="main">
+
+    <!-- Feed -->
+    <div class="feed-col">
+      <div class="feed-header">
+        <span class="feed-header-title">Deal Feed</span>
+        <div class="feed-toolbar">
+          <input type="text" class="search" id="search-box" placeholder="Search deals..." oninput="filterDeals()" />
+          <select id="filter-market" onchange="filterDeals()" style="font-size:11px;padding:6px 8px;">
+            <option value="">All Markets</option>
+          </select>
+          <button class="btn btn-outline btn-sm" onclick="exportCSV()">↓ CSV</button>
+        </div>
+      </div>
+      <div class="log-area" id="log-area"></div>
+      <div id="deal-feed">
+        <div class="empty-feed">
+          <div class="big">📬</div>
+          <p>No deals yet. Forward some broker emails to your Gmail and hit Sync.</p>
+        </div>
+      </div>
+    </div>
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+
+      <div class="sidebar-section">
+        <div class="sidebar-heading">Account</div>
+        <div id="account-chip" class="account-chip" style="display:none;">
+          <div class="account-dot"></div>
+          <span class="account-email" id="account-email-text">—</span>
+        </div>
+        <div class="schedule-chip" id="next-sync-chip" style="display:none;">
+          <div class="schedule-dot"></div>
+          <span id="next-sync-text">—</span>
+        </div>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-heading">Settings</div>
+        <div class="config-field">
+          <label class="config-label">Summary Recipient</label>
+          <input type="email" id="summary-email-live" placeholder="you@fpamultifamily.com" />
+        </div>
+        <div class="config-field">
+          <label class="config-label">Daily Summary Time</label>
+          <select id="summary-time-live">
+            <option value="17:00">5:00 PM</option>
+            <option value="17:30">5:30 PM</option>
+            <option value="18:00">6:00 PM</option>
+            <option value="08:00">8:00 AM</option>
+          </select>
+        </div>
+        <div class="config-field">
+          <label class="config-label">Emails to Scan</label>
+          <input type="number" id="scan-count" value="30" min="5" max="100" />
+        </div>
+        <button class="btn btn-primary btn-sm" style="width:100%;justify-content:center;" onclick="saveSettings()">Save Settings</button>
+      </div>
+
+      <div class="sidebar-section">
+        <div class="sidebar-heading">Daily Summary</div>
+        <div class="summary-preview" id="summary-preview">
+          Summary will show here after sync.
+        </div>
+        <br>
+        <button class="btn btn-gold btn-sm" style="width:100%;justify-content:center;" onclick="sendSummaryNow()">✉ Send Now</button>
+      </div>
+
+    </div>
+  </div>
+</div><!-- /app -->
+
+<!-- Detail panel -->
+<div class="overlay" id="overlay" onclick="closeDetail()"></div>
+<div class="detail-panel" id="detail-panel">
+  <div class="detail-header">
+    <div class="detail-title" id="dp-title">—</div>
+    <button class="close-btn" onclick="closeDetail()">✕</button>
+  </div>
+  <div class="detail-body" id="dp-body"></div>
+</div>
+
+</div><!-- /wrap -->
+
+<script>
+// ════════════════════════════════════════════════════
+// CONSTANTS
+// ════════════════════════════════════════════════════
+const CLAUDE_MODEL = "claude-sonnet-4-20250514";
+const GOOGLE_CLIENT_ID = ""; // User must provide — see setup below
+const SCOPES = "https://www.googleapis.com/auth/gmail.readonly https://www.googleapis.com/auth/gmail.send";
+
+// Storage keys
+const SK_DEALS    = "dealflow:deals";
+const SK_TOKEN    = "dealflow:gtoken";
+const SK_EMAIL    = "dealflow:summail";
+const SK_TIME     = "dealflow:sumtime";
+const SK_LAST     = "dealflow:lastSync";
+const SK_GCLIENT  = "dealflow:gclient";
+const SK_PROCESSED= "dealflow:processed"; // set of processed email IDs
+
+// ════════════════════════════════════════════════════
+// STATE
+// ════════════════════════════════════════════════════
+let allDeals = [];
+let filteredDeals = [];
+let gToken = null;
+let userEmail = "";
+let summaryScheduled = null;
+let selectedIdx = null;
+
+// ════════════════════════════════════════════════════
+// STORAGE HELPERS (uses window.storage if available, else localStorage fallback)
+// ════════════════════════════════════════════════════
+async function storeSave(key, val) {
+  try {
+    if (window.storage) await window.storage.set(key, JSON.stringify(val));
+    else localStorage.setItem(key, JSON.stringify(val));
+  } catch(e) { console.warn('storeSave', e); }
+}
+async function storeLoad(key) {
+  try {
+    if (window.storage) {
+      const r = await window.storage.get(key);
+      return r ? JSON.parse(r.value) : null;
+    } else {
+      const v = localStorage.getItem(key);
+      return v ? JSON.parse(v) : null;
+    }
+  } catch(e) { return null; }
+}
+
+// ════════════════════════════════════════════════════
+// BOOT
+// ════════════════════════════════════════════════════
+window.addEventListener('load', async () => {
+  // Check for OAuth callback
+  const hash = window.location.hash;
+  if (hash.includes('access_token')) {
+    const params = new URLSearchParams(hash.slice(1));
+    const token = params.get('access_token');
+    if (token) {
+      gToken = token;
+      await storeSave(SK_TOKEN, token);
+      history.replaceState(null, '', window.location.pathname);
+      await initApp();
+      return;
+    }
+  }
+
+  // Try saved token
+  const saved = await storeLoad(SK_TOKEN);
+  if (saved) {
+    gToken = saved;
+    await initApp();
+    return;
+  }
+
+  // Load saved summary prefs into auth form
+  const savedEmail = await storeLoad(SK_EMAIL);
+  const savedTime  = await storeLoad(SK_TIME);
+  if (savedEmail) document.getElementById('summary-email-input').value = savedEmail;
+  if (savedTime)  document.getElementById('summary-time-input').value = savedTime;
+});
+
+async function initApp() {
+  // Verify token is still valid
+  try {
+    const me = await gFetch('https://gmail.googleapis.com/gmail/v1/users/me/profile');
+    userEmail = me.emailAddress;
+    document.getElementById('account-email-text').textContent = userEmail;
+    document.getElementById('account-chip').style.display = 'flex';
+  } catch(e) {
+    // Token expired
+    await storeSave(SK_TOKEN, null);
+    gToken = null;
+    return;
+  }
+
+  // Load settings
+  const savedEmail = await storeLoad(SK_EMAIL);
+  const savedTime  = await storeLoad(SK_TIME);
+  if (savedEmail) {
+    document.getElementById('summary-email-live').value = savedEmail;
+    document.getElementById('summary-email-input').value = savedEmail;
+  }
+  if (savedTime) {
+    document.getElementById('summary-time-live').value = savedTime;
+    document.getElementById('summary-time-input').value = savedTime;
+  }
+
+  // Load saved deals
+  const saved = await storeLoad(SK_DEALS);
+  if (saved && Array.isArray(saved)) {
+    allDeals = saved;
+    filteredDeals = [...allDeals];
+    renderFeed(filteredDeals);
+    updateStats(allDeals);
+    updateTicker(allDeals);
+    updateMarketFilter(allDeals);
+    updateSummaryPreview(allDeals);
+  }
+
+  // Show app
+  document.getElementById('auth-screen').style.display = 'none';
+  document.getElementById('app').style.display = 'block';
+  document.getElementById('header-btns').style.display = 'flex';
+
+  // Schedule summary
+  scheduleDailySummary();
+
+  // Auto sync
+  await syncNow();
+}
+
+// ════════════════════════════════════════════════════
+// GOOGLE AUTH (implicit flow)
+// ════════════════════════════════════════════════════
+async function startGoogleAuth() {
+  // Save settings before redirect
+  const email = document.getElementById('summary-email-input').value.trim();
+  const time  = document.getElementById('summary-time-input').value;
+  if (email) await storeSave(SK_EMAIL, email);
+  await storeSave(SK_TIME, time);
+
+  // Get or prompt for client ID
+  let clientId = await storeLoad(SK_GCLIENT);
+  if (!clientId) {
+    clientId = prompt(
+      "Enter your Google OAuth Client ID.\n\n" +
+      "To get one (free):\n" +
+      "1. Go to console.cloud.google.com\n" +
+      "2. Create project → Enable Gmail API\n" +
+      "3. Credentials → Create OAuth 2.0 Client ID (Web application)\n" +
+      "4. Add this page's URL as an Authorized redirect URI\n\n" +
+      "Paste your Client ID here:"
+    );
+    if (!clientId) return;
+    await storeSave(SK_GCLIENT, clientId.trim());
+  }
+
+  const redirectUri = encodeURIComponent(window.location.href.split('?')[0].split('#')[0]);
+  const scope = encodeURIComponent(SCOPES);
+  const url = `https://accounts.google.com/o/oauth2/v2/auth?client_id=${clientId}&redirect_uri=${redirectUri}&response_type=token&scope=${scope}&prompt=select_account`;
+  window.location.href = url;
+}
+
+function logout() {
+  if (!confirm('Sign out? Your deal data will be preserved.')) return;
+  storeSave(SK_TOKEN, null);
+  gToken = null;
+  document.getElementById('app').style.display = 'none';
+  document.getElementById('header-btns').style.display = 'none';
+  document.getElementById('auth-screen').style.display = 'flex';
+  if (summaryScheduled) clearTimeout(summaryScheduled);
+}
+
+// ════════════════════════════════════════════════════
+// GMAIL API HELPERS
+// ════════════════════════════════════════════════════
+async function gFetch(url, opts = {}) {
+  const res = await fetch(url, {
+    ...opts,
+    headers: { Authorization: 'Bearer ' + gToken, 'Content-Type': 'application/json', ...(opts.headers || {}) }
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(() => ({}));
+    throw new Error(err.error?.message || `HTTP ${res.status}`);
+  }
+  return res.json();
+}
+
+// ════════════════════════════════════════════════════
+// SYNC
+// ════════════════════════════════════════════════════
+async function syncNow() {
+  if (!gToken) return;
+  showProcessing('Connecting to Gmail...');
+  showLog();
+  log('Starting Gmail sync...', 'hi');
+
+  try {
+    const count = parseInt(document.getElementById('scan-count').value || '30');
+
+    // Fetch message list
+    log(`Fetching up to ${count} recent emails...`);
+    const listRes = await gFetch(
+      `https://gmail.googleapis.com/gmail/v1/users/me/messages?maxResults=${count}&q=in:inbox`
+    );
+    const messages = listRes.messages || [];
+    log(`Found ${messages.length} messages`, 'ok');
+
+    // Load processed IDs
+    const processed = new Set((await storeLoad(SK_PROCESSED)) || []);
+
+    // Filter to unprocessed
+    const toProcess = messages.filter(m => !processed.has(m.id));
+    log(`${toProcess.length} new emails to check`);
+
+    let newDeals = 0;
+    for (let i = 0; i < toProcess.length; i++) {
+      const msg = toProcess[i];
+      showProcessing(`Reading email ${i+1}/${toProcess.length}...`);
+
+      try {
+        // Fetch full message
+        const full = await gFetch(
+          `https://gmail.googleapis.com/gmail/v1/users/me/messages/${msg.id}?format=full`
+        );
+
+        const subject = getHeader(full, 'Subject');
+        const from    = getHeader(full, 'From');
+        const date    = getHeader(full, 'Date');
+        const bodyText = extractBody(full);
+
+        if (!isDealEmail(subject, bodyText)) {
+          processed.add(msg.id);
+          continue;
+        }
+
+        log(`Processing: "${subject.substring(0,55)}..."`, 'hi');
+
+        const deal = await extractDeal({ subject, from, date, body: bodyText, id: msg.id });
+        if (deal) {
+          // Avoid dupes by property name
+          const exists = allDeals.find(d => d.propertyName && deal.propertyName &&
+            d.propertyName.toLowerCase() === deal.propertyName.toLowerCase());
+          if (!exists) {
+            allDeals.unshift({ ...deal, isNew: true, msgId: msg.id });
+            newDeals++;
+            log(`✓ ${deal.propertyName || 'Unknown'} | ${deal.units||'?'} units | ${deal.location||'?'}`, 'ok');
+          }
+        }
+
+        processed.add(msg.id);
+      } catch(e) {
+        log(`Error on ${msg.id}: ${e.message}`, 'err');
+        processed.add(msg.id);
+      }
+    }
+
+    // Persist
+    await storeSave(SK_DEALS, allDeals);
+    await storeSave(SK_PROCESSED, [...processed]);
+    await storeSave(SK_LAST, new Date().toISOString());
+
+    log(`Sync complete. ${newDeals} new deal(s) found.`, 'ok');
+
+    filteredDeals = [...allDeals];
+    renderFeed(filteredDeals);
+    updateStats(allDeals);
+    updateTicker(allDeals);
+    updateMarketFilter(allDeals);
+    updateSummaryPreview(allDeals);
+
+    document.getElementById('sync-status').style.display = 'flex';
+    document.getElementById('sync-status-text').textContent = `Last synced ${new Date().toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})}`;
+
+  } catch(e) {
+    log('Sync failed: ' + e.message, 'err');
+    console.error(e);
+    if (e.message.includes('401') || e.message.includes('invalid')) {
+      alert('Your Google session has expired. Please sign in again.');
+      logout();
+    }
+  }
+
+  hideProcessing();
+}
+
+function getHeader(msg, name) {
+  const headers = msg.payload?.headers || [];
+  return headers.find(h => h.name.toLowerCase() === name.toLowerCase())?.value || '';
+}
+
+function extractBody(msg) {
+  const parts = [];
+  function walk(payload) {
+    if (!payload) return;
+    if (payload.mimeType === 'text/plain' && payload.body?.data) {
+      parts.push(atob(payload.body.data.replace(/-/g,'+').replace(/_/g,'/')));
+    } else if (payload.mimeType === 'text/html' && payload.body?.data) {
+      const html = atob(payload.body.data.replace(/-/g,'+').replace(/_/g,'/'));
+      parts.push(html.replace(/<[^>]+>/g,' ').replace(/\s+/g,' '));
+    }
+    (payload.parts || []).forEach(walk);
+  }
+  walk(msg.payload);
+  return parts.join('\n').trim().substring(0, 4000);
+}
+
+// ════════════════════════════════════════════════════
+// DEAL DETECTION
+// ════════════════════════════════════════════════════
+function isDealEmail(subject, body) {
+  const txt = (subject + ' ' + body).toLowerCase();
+  const keywords = [
+    'offering memorandum','om available','investment opportunity',
+    'for sale','call for offers','cfo','bid date','multifamily',
+    'apartment','units','cap rate','noi','value-add','stabilized',
+    'exclusively offered','exclusive listing','marketed for sale',
+    'newly listed','available for acquisition','offering price'
+  ];
+  return keywords.some(k => txt.includes(k));
+}
+
+// ════════════════════════════════════════════════════
+// CLAUDE EXTRACTION
+// ════════════════════════════════════════════════════
+async function extractDeal({ subject, from, date, body }) {
+  const prompt = `You are a commercial real estate acquisitions analyst specializing in multifamily. Extract deal information from this forwarded broker email.
+
+EMAIL:
+Subject: ${subject}
+From: ${from}
+Date: ${date}
+Body:
+${body.substring(0, 3000)}
+
+Return ONLY a valid JSON object (no markdown) with these exact fields:
+{
+  "isDeal": true or false,
+  "propertyName": "string or null",
+  "units": number or null,
+  "yearBuilt": number or null,
+  "location": "City, State or null",
+  "state": "2-letter code or null",
+  "callForOffers": "date string or null",
+  "askingPrice": "string or null",
+  "capRate": "string or null",
+  "brokerName": "string or null",
+  "brokerFirm": "CBRE / JLL / Cushman / Marcus Millichap / Newmark / Colliers / other firm name or null",
+  "brokerEmail": "string or null",
+  "brokerPhone": "string or null",
+  "dealType": "Sale or Recap or JV or Debt or Other",
+  "propertyClass": "A or B or C or null",
+  "amenities": "brief string or null",
+  "notes": "one sentence of notable info or null"
+}`;
+
+  const res = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      model: CLAUDE_MODEL,
+      max_tokens: 700,
+      messages: [{ role: "user", content: prompt }]
+    })
+  });
+
+  if (!res.ok) throw new Error('Claude API ' + res.status);
+  const data = await res.json();
+  const txt = data.content?.[0]?.text || '';
+
+  try {
+    const clean = txt.replace(/```json|```/g,'').trim();
+    const parsed = JSON.parse(clean);
+    if (!parsed.isDeal) return null;
+    return {
+      ...parsed,
+      subject,
+      fromRaw: from,
+      dateRaw: date,
+      rawBody: body.substring(0, 600),
+      id: Math.random().toString(36).slice(2),
+      addedAt: new Date().toISOString()
+    };
+  } catch { return null; }
+}
+
+// ════════════════════════════════════════════════════
+// RENDER FEED
+// ════════════════════════════════════════════════════
+function renderFeed(deals) {
+  const feed = document.getElementById('deal-feed');
+  if (!deals.length) {
+    feed.innerHTML = `<div class="empty-feed"><div class="big">📬</div><p>No deals yet. Forward broker emails to your Gmail and hit Sync.</p></div>`;
+    return;
+  }
+
+  feed.innerHTML = deals.map((d, i) => {
+    const cfo = cfoChip(d.callForOffers);
+    const isNew = d.isNew;
+    return `<div class="deal-card${selectedIdx===i?' selected':''}" onclick="openDetail(${i})">
+      ${isNew ? '<div class="new-badge">New</div>' : ''}
+      <div class="deal-card-header">
+        <div class="deal-name">${esc(d.propertyName || d.subject?.substring(0,50) || 'Unknown Deal')}</div>
+        <div class="deal-date">${fmtDate(d.dateRaw || d.addedAt)}</div>
+      </div>
+      <div class="deal-meta">
+        ${d.units ? `<span class="pill pill-units">${d.units.toLocaleString()} UNITS</span>` : ''}
+        ${d.yearBuilt ? `<span class="pill pill-year">${d.yearBuilt}</span>` : ''}
+        ${d.location ? `<span class="pill pill-location">${esc(d.location)}</span>` : ''}
+        ${cfo}
+        ${d.askingPrice ? `<span class="pill" style="border-color:var(--green);color:var(--green);background:rgba(45,106,79,0.06);">${esc(d.askingPrice)}</span>` : ''}
+      </div>
+      <div class="deal-broker">
+        ${d.brokerName ? `<strong>${esc(d.brokerName)}</strong>` : ''}
+        ${d.brokerFirm ? ` · ${esc(d.brokerFirm)}` : ''}
+        ${!d.brokerName && !d.brokerFirm ? `<em>${esc(d.fromRaw?.split('<')[0]?.trim() || '—')}</em>` : ''}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function cfoChip(cfo) {
+  if (!cfo) return `<span class="pill pill-cfo none">CFO TBD</span>`;
+  const d = new Date(cfo);
+  if (isNaN(d)) return `<span class="pill pill-cfo">${esc(cfo)}</span>`;
+  const diff = d - new Date();
+  const days = Math.round(diff / 86400000);
+  if (days < 0) return `<span class="pill pill-cfo passed">CFO ${fmtShort(d)}</span>`;
+  if (days <= 10) return `<span class="pill pill-cfo soon">⚡ CFO ${fmtShort(d)} (${days}d)</span>`;
+  return `<span class="pill pill-cfo">CFO ${fmtShort(d)}</span>`;
+}
+
+function fmtDate(iso) {
+  if (!iso) return '—';
+  const d = new Date(iso);
+  if (isNaN(d)) return iso.substring(0,16);
+  return d.toLocaleDateString('en-US', { month:'short', day:'numeric' });
+}
+function fmtShort(d) { return d.toLocaleDateString('en-US', { month:'short', day:'numeric', year:'numeric' }); }
+function esc(s) { return s ? String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;') : ''; }
+
+// ════════════════════════════════════════════════════
+// DETAIL PANEL
+// ════════════════════════════════════════════════════
+function openDetail(i) {
+  selectedIdx = i;
+  const d = filteredDeals[i];
+  d.isNew = false; // mark read
+  storeSave(SK_DEALS, allDeals);
+  renderFeed(filteredDeals);
+
+  document.getElementById('dp-title').textContent = d.propertyName || d.subject?.substring(0,60) || 'Deal Detail';
+
+  const fields = [
+    ['Location', d.location],
+    ['Units', d.units ? d.units.toLocaleString() + ' units' : null],
+    ['Year Built', d.yearBuilt],
+    ['Property Class', d.propertyClass],
+    ['Call for Offers', d.callForOffers],
+    ['Asking Price', d.askingPrice],
+    ['Cap Rate', d.capRate],
+    ['Deal Type', d.dealType],
+    ['Broker', d.brokerName],
+    ['Brokerage', d.brokerFirm],
+    ['Broker Email', d.brokerEmail],
+    ['Broker Phone', d.brokerPhone],
+    ['Received', d.dateRaw ? new Date(d.dateRaw).toLocaleDateString('en-US',{year:'numeric',month:'long',day:'numeric'}) : null],
+    ['Notes', d.notes],
+  ];
+
+  document.getElementById('dp-body').innerHTML = `
+    <div class="detail-section">
+      <div class="detail-section-title">Deal Details</div>
+      <div class="detail-grid">
+        ${fields.map(([lbl,val]) => `
+          <div class="detail-cell">
+            <div class="detail-cell-lbl">${lbl}</div>
+            <div class="detail-cell-val ${!val?'na':''}">${esc(val) || 'Not found'}</div>
+          </div>`).join('')}
+      </div>
+    </div>
+    <div class="detail-section">
+      <div class="detail-section-title">Email Subject</div>
+      <div style="font-style:italic;color:var(--muted);font-size:13px;margin-bottom:10px;">${esc(d.subject)}</div>
+    </div>
+    <div class="detail-section">
+      <div class="detail-section-title">Email Excerpt</div>
+      <div class="raw-block">${esc(d.rawBody || 'No excerpt')}</div>
+    </div>
+    <div style="margin-top:20px;">
+      <button class="btn btn-outline btn-sm" onclick="deleteDeal(${i})">Remove Deal</button>
+    </div>
+  `;
+
+  document.getElementById('detail-panel').classList.add('open');
+  document.getElementById('overlay').classList.add('open');
+}
+
+function closeDetail() {
+  document.getElementById('detail-panel').classList.remove('open');
+  document.getElementById('overlay').classList.remove('open');
+  selectedIdx = null;
+}
+
+function deleteDeal(i) {
+  if (!confirm('Remove this deal?')) return;
+  const deal = filteredDeals[i];
+  allDeals = allDeals.filter(d => d.id !== deal.id);
+  filteredDeals = filteredDeals.filter(d => d.id !== deal.id);
+  storeSave(SK_DEALS, allDeals);
+  renderFeed(filteredDeals);
+  updateStats(allDeals);
+  closeDetail();
+}
+
+// ════════════════════════════════════════════════════
+// STATS & UI
+// ════════════════════════════════════════════════════
+function updateStats(deals) {
+  document.getElementById('s-deals').textContent = deals.length;
+  const totalUnits = deals.reduce((s,d) => s+(d.units||0), 0);
+  document.getElementById('s-units').textContent = totalUnits > 0 ? totalUnits.toLocaleString() : '—';
+  const activeCFOs = deals.filter(d => { const dt=new Date(d.callForOffers); return !isNaN(dt) && dt>new Date(); }).length;
+  document.getElementById('s-cfo').textContent = activeCFOs;
+  const markets = new Set(deals.map(d=>d.state||d.location?.split(',').pop()?.trim()).filter(Boolean)).size;
+  document.getElementById('s-markets').textContent = markets;
+  const brokers = new Set(deals.map(d=>d.brokerName).filter(Boolean)).size;
+  document.getElementById('s-brokers').textContent = brokers;
+}
+
+function updateTicker(deals) {
+  if (!deals.length) return;
+  const items = deals.slice(0,10).map(d =>
+    `<span class="ticker-item">${esc(d.propertyName||'Deal')} <span>·</span> ${d.location||'—'} <span>·</span> ${d.units?d.units+' units':'?'}</span>`
+  ).join('');
+  document.getElementById('ticker-items').innerHTML = items;
+}
+
+function updateMarketFilter(deals) {
+  const states = [...new Set(deals.map(d=>d.state||d.location?.split(',').pop()?.trim()).filter(Boolean))].sort();
+  const sel = document.getElementById('filter-market');
+  const cur = sel.value;
+  sel.innerHTML = '<option value="">All Markets</option>' + states.map(s => `<option value="${s}">${s}</option>`).join('');
+  sel.value = cur;
+}
+
+function filterDeals() {
+  const q = document.getElementById('search-box').value.toLowerCase();
+  const mkt = document.getElementById('filter-market').value;
+  filteredDeals = allDeals.filter(d => {
+    const txt = [d.propertyName,d.location,d.brokerName,d.brokerFirm,d.subject].join(' ').toLowerCase();
+    if (q && !txt.includes(q)) return false;
+    if (mkt && !(d.state||d.location||'').includes(mkt)) return false;
+    return true;
+  });
+  renderFeed(filteredDeals);
+}
+
+// ════════════════════════════════════════════════════
+// DAILY SUMMARY EMAIL
+// ════════════════════════════════════════════════════
+function updateSummaryPreview(deals) {
+  const today = deals.filter(d => {
+    const added = new Date(d.addedAt);
+    const now = new Date();
+    return added.toDateString() === now.toDateString();
+  });
+
+  const preview = today.length
+    ? `${today.length} deal(s) today:\n` + today.slice(0,5).map(d =>
+        `• ${d.propertyName||'Unknown'} — ${d.location||'?'} — ${d.units||'?'} units`
+      ).join('\n')
+    : 'No new deals today (yet).';
+
+  document.getElementById('summary-preview').textContent = preview;
+}
+
+function scheduleDailySummary() {
+  if (summaryScheduled) clearTimeout(summaryScheduled);
+
+  const timeVal = document.getElementById('summary-time-live').value || '17:00';
+  const [h, m] = timeVal.split(':').map(Number);
+
+  const now = new Date();
+  const target = new Date();
+  target.setHours(h, m, 0, 0);
+  if (target <= now) target.setDate(target.getDate() + 1);
+
+  const ms = target - now;
+  const mins = Math.round(ms / 60000);
+
+  document.getElementById('next-sync-chip').style.display = 'flex';
+  document.getElementById('next-sync-text').textContent =
+    `Summary scheduled in ${mins < 60 ? mins + 'm' : Math.round(mins/60) + 'h'}`;
+
+  summaryScheduled = setTimeout(async () => {
+    await sendSummaryNow();
+    scheduleDailySummary(); // reschedule for next day
+  }, ms);
+}
+
+async function sendSummaryNow() {
+  const toEmail = document.getElementById('summary-email-live').value.trim() ||
+                  document.getElementById('summary-email-input').value.trim();
+
+  if (!toEmail) { alert('Please enter your email address in Settings first.'); return; }
+  if (!gToken) { alert('Not connected to Gmail.'); return; }
+
+  showProcessing('Generating summary email...');
+
+  // Get today's deals
+  const today = allDeals.filter(d => {
+    const added = new Date(d.addedAt);
+    return added.toDateString() === new Date().toDateString();
+  });
+
+  const allActive = allDeals.filter(d => {
+    const dt = new Date(d.callForOffers);
+    return !isNaN(dt) && dt > new Date();
+  }).sort((a,b) => new Date(a.callForOffers) - new Date(b.callForOffers));
+
+  // Build email HTML
+  const htmlBody = buildSummaryHTML(today, allActive, allDeals);
+
+  // Encode as RFC 2822
+  const subject = `Deal Flow Summary — ${new Date().toLocaleDateString('en-US',{weekday:'long',month:'long',day:'numeric'})}`;
+  const raw = buildRawEmail(userEmail, toEmail, subject, htmlBody);
+
+  try {
+    await gFetch('https://gmail.googleapis.com/gmail/v1/users/me/messages/send', {
+      method: 'POST',
+      body: JSON.stringify({ raw })
+    });
+    log(`Summary sent to ${toEmail}`, 'ok');
+    alert(`✓ Summary sent to ${toEmail}`);
+  } catch(e) {
+    log('Failed to send summary: ' + e.message, 'err');
+    alert('Failed to send: ' + e.message);
+  }
+
+  hideProcessing();
+}
+
+function buildSummaryHTML(todayDeals, activeCFOs, allDeals) {
+  const todayRows = todayDeals.map(d => `
+    <tr>
+      <td style="padding:10px 12px;border-bottom:1px solid #e8e0d0;font-weight:600;">${esc(d.propertyName||'—')}</td>
+      <td style="padding:10px 12px;border-bottom:1px solid #e8e0d0;">${esc(d.location||'—')}</td>
+      <td style="padding:10px 12px;border-bottom:1px solid #e8e0d0;">${d.units?d.units.toLocaleString():'—'}</td>
+      <td style="padding:10px 12px;border-bottom:1px solid #e8e0d0;">${d.yearBuilt||'—'}</td>
+      <td style="padding:10px 12px;border-bottom:1px solid #e8e0d0;">${esc(d.callForOffers||'TBD')}</td>
+      <td style="padding:10px 12px;border-bottom:1px solid #e8e0d0;">${esc(d.brokerName||'—')}</td>
+    </tr>`).join('');
+
+  const cfoRows = activeCFOs.slice(0,10).map(d => {
+    const dt = new Date(d.callForOffers);
+    const days = Math.round((dt - new Date()) / 86400000);
+    const urgent = days <= 7;
+    return `
+    <tr>
+      <td style="padding:10px 12px;border-bottom:1px solid #e8e0d0;font-weight:600;">${esc(d.propertyName||'—')}</td>
+      <td style="padding:10px 12px;border-bottom:1px solid #e8e0d0;">${esc(d.location||'—')}</td>
+      <td style="padding:10px 12px;border-bottom:1px solid #e8e0d0;">${d.units?d.units.toLocaleString():'—'}</td>
+      <td style="padding:10px 12px;border-bottom:1px solid #e8e0d0;${urgent?'color:#c0392b;font-weight:700;':''}">${fmtShort(dt)} <span style="font-size:11px;">(${days}d)</span></td>
+      <td style="padding:10px 12px;border-bottom:1px solid #e8e0d0;">${esc(d.brokerName||'—')}</td>
+    </tr>`;
+  }).join('');
+
+  return `<!DOCTYPE html><html><body style="margin:0;padding:0;background:#f5f0e8;font-family:Georgia,serif;">
+<div style="max-width:700px;margin:30px auto;background:#fff;border:1px solid #d4cdc0;">
+  <div style="background:#1a1a18;padding:24px 32px;">
+    <div style="font-family:Arial,sans-serif;font-size:10px;letter-spacing:4px;text-transform:uppercase;color:#b8860b;margin-bottom:4px;">FPA MULTIFAMILY · ACQUISITIONS</div>
+    <div style="font-size:24px;font-weight:900;color:#fff;letter-spacing:-0.5px;">DEAL FLOW SUMMARY</div>
+    <div style="font-size:12px;color:#8a8275;margin-top:3px;">${new Date().toLocaleDateString('en-US',{weekday:'long',year:'numeric',month:'long',day:'numeric'})}</div>
+  </div>
+  <div style="padding:28px 32px;">
+    <table style="width:100%;border-collapse:collapse;margin-bottom:6px;">
+      <tr>
+        <td style="text-align:center;padding:12px;background:#f5f0e8;border:1px solid #e8e0d0;">
+          <div style="font-size:28px;font-weight:900;font-family:Arial,sans-serif;">${todayDeals.length}</div>
+          <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:#8a8275;">New Today</div>
+        </td>
+        <td style="text-align:center;padding:12px;background:#f5f0e8;border:1px solid #e8e0d0;">
+          <div style="font-size:28px;font-weight:900;font-family:Arial,sans-serif;">${allDeals.length}</div>
+          <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:#8a8275;">Total Deals</div>
+        </td>
+        <td style="text-align:center;padding:12px;background:#f5f0e8;border:1px solid #e8e0d0;">
+          <div style="font-size:28px;font-weight:900;font-family:Arial,sans-serif;">${activeCFOs.length}</div>
+          <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:#8a8275;">Active CFOs</div>
+        </td>
+        <td style="text-align:center;padding:12px;background:#f5f0e8;border:1px solid #e8e0d0;">
+          <div style="font-size:28px;font-weight:900;font-family:Arial,sans-serif;">${allDeals.reduce((s,d)=>s+(d.units||0),0).toLocaleString()}</div>
+          <div style="font-size:10px;letter-spacing:2px;text-transform:uppercase;color:#8a8275;">Total Units</div>
+        </td>
+      </tr>
+    </table>
+
+    ${todayDeals.length ? `
+    <h3 style="font-size:11px;letter-spacing:3px;text-transform:uppercase;color:#8a8275;border-bottom:2px solid #1a1a18;padding-bottom:6px;margin:24px 0 12px;">New Deals Today</h3>
+    <table style="width:100%;border-collapse:collapse;font-size:13px;">
+      <thead><tr style="background:#f5f0e8;">
+        <th style="padding:8px 12px;text-align:left;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:#8a8275;font-weight:600;">Property</th>
+        <th style="padding:8px 12px;text-align:left;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:#8a8275;font-weight:600;">Location</th>
+        <th style="padding:8px 12px;text-align:left;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:#8a8275;font-weight:600;">Units</th>
+        <th style="padding:8px 12px;text-align:left;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:#8a8275;font-weight:600;">Vintage</th>
+        <th style="padding:8px 12px;text-align:left;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:#8a8275;font-weight:600;">CFO</th>
+        <th style="padding:8px 12px;text-align:left;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:#8a8275;font-weight:600;">Broker</th>
+      </tr></thead>
+      <tbody>${todayRows}</tbody>
+    </table>` : '<p style="color:#8a8275;font-style:italic;padding:16px 0;">No new deals today.</p>'}
+
+    ${activeCFOs.length ? `
+    <h3 style="font-size:11px;letter-spacing:3px;text-transform:uppercase;color:#8a8275;border-bottom:2px solid #c0392b;padding-bottom:6px;margin:28px 0 12px;">⚡ Upcoming Call for Offers</h3>
+    <table style="width:100%;border-collapse:collapse;font-size:13px;">
+      <thead><tr style="background:#fff5f5;">
+        <th style="padding:8px 12px;text-align:left;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:#8a8275;font-weight:600;">Property</th>
+        <th style="padding:8px 12px;text-align:left;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:#8a8275;font-weight:600;">Location</th>
+        <th style="padding:8px 12px;text-align:left;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:#8a8275;font-weight:600;">Units</th>
+        <th style="padding:8px 12px;text-align:left;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:#8a8275;font-weight:600;">CFO Date</th>
+        <th style="padding:8px 12px;text-align:left;font-size:10px;letter-spacing:1px;text-transform:uppercase;color:#8a8275;font-weight:600;">Broker</th>
+      </tr></thead>
+      <tbody>${cfoRows}</tbody>
+    </table>` : ''}
+  </div>
+  <div style="background:#f5f0e8;padding:16px 32px;border-top:1px solid #d4cdc0;font-size:11px;color:#8a8275;font-family:Arial,sans-serif;">
+    FPA Multifamily Deal Flow Tracker · Automated daily summary
+  </div>
+</div></body></html>`;
+}
+
+function buildRawEmail(from, to, subject, html) {
+  const msg = [
+    `From: ${from}`,
+    `To: ${to}`,
+    `Subject: ${subject}`,
+    `MIME-Version: 1.0`,
+    `Content-Type: text/html; charset=utf-8`,
+    ``,
+    html
+  ].join('\r\n');
+  return btoa(unescape(encodeURIComponent(msg)))
+    .replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+}
+
+// ════════════════════════════════════════════════════
+// SETTINGS
+// ════════════════════════════════════════════════════
+async function saveSettings() {
+  const email = document.getElementById('summary-email-live').value.trim();
+  const time  = document.getElementById('summary-time-live').value;
+  await storeSave(SK_EMAIL, email);
+  await storeSave(SK_TIME, time);
+  scheduleDailySummary();
+  alert('Settings saved. Daily summary scheduled.');
+}
+
+// ════════════════════════════════════════════════════
+// EXPORT
+// ════════════════════════════════════════════════════
+function exportCSV() {
+  if (!allDeals.length) { alert('No deals to export.'); return; }
+  const headers = ['Property','Location','Units','Year Built','CFO','Asking Price','Cap Rate','Broker','Brokerage','Broker Email','Subject','Received','Notes'];
+  const rows = allDeals.map(d => [
+    d.propertyName, d.location, d.units, d.yearBuilt, d.callForOffers,
+    d.askingPrice, d.capRate, d.brokerName, d.brokerFirm, d.brokerEmail,
+    d.subject, d.dateRaw, d.notes
+  ].map(v => `"${String(v||'').replace(/"/g,'""')}"`));
+  const csv = [headers.join(','), ...rows.map(r=>r.join(','))].join('\n');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([csv], {type:'text/csv'}));
+  a.download = `deal-flow-${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+}
+
+// ════════════════════════════════════════════════════
+// UI HELPERS
+// ════════════════════════════════════════════════════
+function showProcessing(msg) {
+  document.getElementById('processing-strip').classList.add('show');
+  document.getElementById('processing-msg').textContent = msg;
+}
+function hideProcessing() {
+  document.getElementById('processing-strip').classList.remove('show');
+}
+function showLog() { document.getElementById('log-area').classList.add('show'); }
+function log(msg, type='') {
+  const el = document.getElementById('log-area');
+  const line = document.createElement('div');
+  line.className = 'log-line ' + type;
+  line.textContent = `[${new Date().toLocaleTimeString([],{hour:'2-digit',minute:'2-digit',second:'2-digit'})}] ${msg}`;
+  el.appendChild(line);
+  el.scrollTop = el.scrollHeight;
+}
+
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeDetail(); });
+</script>
+</body>
+</html>
